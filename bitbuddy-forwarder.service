@@ -1,0 +1,12 @@
+[Unit]
+Description=Bit Buddy input forwarder (synthetic input workaround for broken Proton RPC)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/share/bitbuddy-forwarder/bitbuddy_forwarder.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
