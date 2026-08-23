@@ -1,5 +1,26 @@
 # Bit Buddy Input Forwarder
 
+> [!WARNING]
+> **Read this before installing.** To work at all, this daemon reads every
+> keystroke you type, system-wide, on every keyboard connected to your
+> machine — not just input meant for Bit Buddy. That's not a side effect,
+> it's required by how the workaround has to function. As shipped, it never
+> writes or sends that data anywhere except a live copy to Bit Buddy's
+> window (see [Security implications](#security-implications) below for how
+> to verify that yourself in the code) — but the *shape* of this tool is a
+> keylogger with a self-imposed rule not to log. In the wrong hands, or if
+> this project or your install of it were ever compromised (a hijacked
+> maintainer account, a malicious PR, a tampered copy), that self-imposed
+> rule is exactly the part that's trivial to remove, and it would run
+> silently at every login with no visible sign anything changed.
+>
+> Only install this if you're willing to read `bitbuddy_forwarder.py` and
+> `install.sh` yourself first (both are short and plain Python/bash, no
+> obfuscation, no network calls), or you trust whoever's telling you to run
+> it as much as you'd trust them with your keyboard. Don't `curl | bash`
+> this from a link someone dropped in chat without checking it's actually
+> pointing at this repo.
+
 Bit Buddy is a Windows desktop-pet game that runs through Steam Proton. It
 ships its own global-input helper ("RawInput Helper.exe") meant to read
 keyboard input even when the game isn't focused, and relay it to the main

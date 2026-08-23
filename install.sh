@@ -3,6 +3,20 @@
 # See INSTALL.md for what this does and why each step is needed.
 set -euo pipefail
 
+cat <<'EOF'
+WARNING: this installs a daemon that reads every keystroke you type,
+system-wide, on every keyboard connected to this machine -- not just
+input meant for Bit Buddy. That's required for the workaround to
+function, not a side effect. It also adds your user to the 'input'
+group permanently. See the README's "Security implications" section,
+and read bitbuddy_forwarder.py yourself, before continuing.
+EOF
+read -rp "Continue? [y/N] " reply
+case "$reply" in
+    [yY]|[yY][eE][sS]) ;;
+    *) echo "Aborted."; exit 1 ;;
+esac
+
 echo "== Installing packages (needs sudo password) =="
 sudo dnf install -y python3-evdev python3-xlib
 
