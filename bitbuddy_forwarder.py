@@ -32,7 +32,8 @@ from Xlib import X, display as xdisplay
 from Xlib.protocol import event as xevent
 from Xlib import error as xerror
 
-TARGET_WM_CLASS = "steam_app_3874950"  # Bit Buddy's Steam app ID
+TARGET_APP_ID = "3874950"  # Bit Buddy's Steam app ID
+TARGET_WM_CLASS = f"steam_app_{TARGET_APP_ID}"
 MIN_WINDOW_SIZE = 10  # px; filters out Steam's tiny placeholder windows
 WINDOW_POLL_INTERVAL = 2.0  # seconds
 
@@ -78,6 +79,45 @@ def iter_windows(win):
         yield from iter_windows(child)
 
 
+def window_pid(disp, win):
+    """Return the PID a window claims via _NET_WM_PID, or None."""
+    try:
+        prop = win.get_full_property(
+            disp.intern_atom("_NET_WM_PID"), X.AnyPropertyType
+        )
+    except xerror.XError:
+        return None
+    if prop is None or not prop.value:
+        return None
+    return int(prop.value[0])
+
+
+def pid_is_target_app(pid):
+    """Verify the PID was actually launched by Steam as TARGET_APP_ID.
+
+    WM_CLASS is just a string any X11 client in the same session can set,
+    so it isn't proof a window belongs to Bit Buddy -- a hostile local
+    process could claim it to have every real keystroke forwarded to it
+    (see listen_device, which reads all keyboard input unconditionally).
+    Steam sets SteamAppId/SteamGameId in the environment of the game
+    process it launches, and child processes (Proton's wine layer
+    included) inherit it, so checking /proc/<pid>/environ ties the window
+    back to a process Steam actually started for this app. Reading
+    another user's environ isn't permitted by the kernel, so this fails
+    closed for anything not running as us.
+    """
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as f:
+            environ_entries = f.read().split(b"\0")
+    except OSError:
+        return False
+    target = TARGET_APP_ID.encode()
+    return any(
+        entry in (b"SteamAppId=" + target, b"SteamGameId=" + target)
+        for entry in environ_entries
+    )
+
+
 def find_target_window(disp):
     """Return (window, geometry) for Bit Buddy's real pet window, or None."""
     root = disp.screen().root
@@ -91,6 +131,13 @@ def find_target_window(disp):
             continue
         instance, cls = wm_class
         if TARGET_WM_CLASS not in (instance, cls):
+            continue
+        pid = window_pid(disp, win)
+        if pid is None or not pid_is_target_app(pid):
+            # WM_CLASS matched but the owning process isn't actually Bit
+            # Buddy -- either a window Steam creates that lacks _NET_WM_PID,
+            # or (what this check exists for) another local process
+            # impersonating the WM_CLASS. Skip it either way.
             continue
         try:
             attrs = win.get_attributes()
